@@ -1,0 +1,7 @@
+# Below document talks about how to use ARGO rollout method to setup Kubernetes Blue Green Deployment setup 
+
+Argo Rollouts → Blue/Green Deployment 
+
+Progressive traffic shifting, rollback support, dependency is it requires Argo Rollouts setup
+Below defines the Argo Rollout resource, replacing the traditional Deployment. It manages Blue-Green deployments with automatic promotion after 24 hours.
+
