@@ -19,11 +19,14 @@ my-app/
 
 # Deployment model with ArgoRollout feature
 
+Argo Rollouts manages ReplicaSets directly, keeping two versions active at the same time (Blue & Green), allowing immediate rollbacks, traffic shifting, and manual approvals.
 
-Step  |	Kubernetes Deployment |	Argo Rollouts (ReplicaSets Model)
---- | --- | ---
-1. | Deploy v1	Creates ReplicaSet for v1 |	Creates ReplicaSet for v1 (Blue)
-2. | Deploy v2	Replaces Pods gradually	| Creates new ReplicaSet for v2 (Green), keeps v1 running
-3. | Test v2	No built-in mechanism	| Traffic is routed to my-app-preview
-4. | Promote v2	Pods of v1 are terminated, | v2 is rolled out	Switches my-app-active to v2, deletes old v1
-5. Rollback if failure	Recreates v1 Pods (takes time) |	Switches my-app-active back to v1 instantly
+🚀 Key Takeaways
+✔ Argo Rollouts uses a single Rollout resource to manage ReplicaSets directly (no Deployments required).
+✔ Blue-Green deployments are controlled by activeService & previewService, making traffic switching instant.
+✔ Rollbacks are instant since the old ReplicaSet is still running.
+✔ Rolling updates (Deployments) cause downtime, while Argo Rollouts prevents it.
+
+Would you like an example of manual approval before switching to Green using Argo Rollouts? 🚀
+
+# Deployment Flow:
