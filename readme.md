@@ -51,3 +51,6 @@ Would you like an example of manual approval before switching to Green using Arg
 
 # Deployment Flow:
 ![Alt text](images/image2.png)
+
+# Key Differences Between Deployment and ReplicaSets Model in Argo Rollouts
+![Alt text](images/image3.png)
