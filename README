@@ -5,3 +5,25 @@ Argo Rollouts → Blue/Green Deployment
 Progressive traffic shifting, rollback support, dependency is it requires Argo Rollouts setup
 Below defines the Argo Rollout resource, replacing the traditional Deployment. It manages Blue-Green deployments with automatic promotion after 24 hours.
 
+Below is the folder structure for the sample app
+
+my-app/
+│── charts/
+│── templates/
+│   ├── rollout.yaml
+│   ├── service-active.yaml
+│   ├── service-preview.yaml
+│   ├── argocd-application.yaml
+│── values.yaml
+│── Chart.yaml
+
+# Deployment model with ArgoRollout feature
+
+
+Step  |	Kubernetes Deployment |	Argo Rollouts (ReplicaSets Model)
+--- | --- | ---
+1. | Deploy v1	Creates ReplicaSet for v1 |	Creates ReplicaSet for v1 (Blue)
+2. | Deploy v2	Replaces Pods gradually	| Creates new ReplicaSet for v2 (Green), keeps v1 running
+3. | Test v2	No built-in mechanism	| Traffic is routed to my-app-preview
+4. | Promote v2	Pods of v1 are terminated, | v2 is rolled out	Switches my-app-active to v2, deletes old v1
+5. Rollback if failure	Recreates v1 Pods (takes time) |	Switches my-app-active back to v1 instantly
