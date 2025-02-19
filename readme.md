@@ -23,7 +23,7 @@ It manages traffic switching via activeService and previewService.
 If the new version fails, rollback is instant (old ReplicaSet is still live).
 ```
 
-Below is the folder structure for the sample app
+## Below is the folder structure for the sample app
 ```
 my-app/
 │── charts/
@@ -37,7 +37,7 @@ my-app/
 │── readme.md
 ```
 
-# Deployment model with ArgoRollout feature
+## Deployment model with ArgoRollout feature
 
 Argo Rollouts manages ReplicaSets directly, keeping two versions active at the same time (Blue & Green), allowing immediate rollbacks, traffic shifting, and manual approvals.
 
@@ -50,10 +50,10 @@ Argo Rollouts manages ReplicaSets directly, keeping two versions active at the s
 
 Would you like an example of manual approval before switching to Green using Argo Rollouts? 🚀
 
-# Deployment Flow:
+## Deployment Flow:
 ![Alt text](images/image2.png)
 
-# Key Differences Between Deployment and ReplicaSets Model in Argo Rollouts
+## Key Differences Between Deployment and ReplicaSets Model in Argo Rollouts
 ![Alt text](images/image3.png)
 
 🚀 Deployment Steps
