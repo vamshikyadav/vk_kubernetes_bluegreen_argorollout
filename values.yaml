@@ -1,0 +1,16 @@
+replicaCount: 3
+
+image:
+  repository: repo.io/my-app
+  tag: v1  # Change this when upgrading
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+  targetPort: 8080
+
+blueGreen:
+  autoPromotionSeconds: 86400  # Auto-promotes Green to Blue after 24 hours
+  autoPromotionEnabled: false  # Change to true for automatic switch
+
+namespace: my-app

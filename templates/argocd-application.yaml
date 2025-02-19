@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app-rollout
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/myorg/myrepo.git'  # Update with your repository
+    targetRevision: main
+    path: helm/my-app  # Adjust based on the Helm chart location
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.namespace }}
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true

@@ -34,6 +34,7 @@ my-app/
 │   ├── argocd-application.yaml
 │── values.yaml
 │── Chart.yaml
+│── readme.md
 ```
 
 # Deployment model with ArgoRollout feature
@@ -54,3 +55,42 @@ Would you like an example of manual approval before switching to Green using Arg
 
 # Key Differences Between Deployment and ReplicaSets Model in Argo Rollouts
 ![Alt text](images/image3.png)
+
+🚀 Deployment Steps
+1️⃣ Install Argo Rollouts
+```
+kubectl apply -n argocd -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+```
+2️⃣ Install the Helm Chart
+```
+helm install my-app ./my-app --namespace my-app
+```
+3️⃣ Deploy the ArgoCD Application
+```
+kubectl apply -f templates/argocd-application.yaml
+```
+4️⃣ Check Rollout Status
+```
+kubectl argo rollouts get rollout my-app-rollout -n my-app
+```
+🎯 Upgrading to a New Version (Deploying Green)
+To deploy a new Green version, update values.yaml:
+```
+image:
+  tag: v2  # Upgrade to v2
+```
+Then, upgrade the Helm release:
+
+```
+helm upgrade my-app ./my-app --namespace my-app
+```
+my-app-preview (Green) will now point to v2.
+Wait for testing & validation before promotion.
+If autoPromotionEnabled: true, traffic automatically shifts after 24 hours.
+🔄 Rolling Back to Blue (If Green Fails)
+If something is wrong before promotion, abort the rollout:
+```
+kubectl argo rollouts abort my-app-rollout -n my-app
+```
+This keeps Blue (v1) running and prevents switching to Green.
+
