@@ -6,7 +6,7 @@ Progressive traffic shifting, rollback support, dependency is it requires Argo R
 Below defines the Argo Rollout resource, replacing the traditional Deployment. It manages Blue-Green deployments with automatic promotion after 24 hours.
 
 Below is the folder structure for the sample app
-
+```
 my-app/
 │── charts/
 │── templates/
@@ -16,6 +16,7 @@ my-app/
 │   ├── argocd-application.yaml
 │── values.yaml
 │── Chart.yaml
+```
 
 # Deployment model with ArgoRollout feature
 
