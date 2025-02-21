@@ -20,7 +20,7 @@ spec:
         - containerPort: 8002
         env:
         - name: DB_HOST
-          value: "YOUR-CLOUD-SQL-HOST"  # Replace with Cloud SQL Private IP or Proxy Address
+          value: "YOUR-CLOUD-SQL-HOST"  
         - name: DB_NAME
           value: "YOUR-DATABASE"
         - name: DB_PORT
