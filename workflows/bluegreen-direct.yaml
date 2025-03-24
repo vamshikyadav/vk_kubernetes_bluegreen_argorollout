@@ -1,0 +1,52 @@
+name: Update YAML and Push Changes
+
+on:
+  workflow_dispatch:
+    inputs:
+      yaml_file:
+        description: "Path to the YAML file to update"
+        required: true
+        default: "config.yaml"
+      key_path:
+        description: "Key path in the YAML file (dot notation for nested keys)"
+        required: true
+      new_value:
+        description: "New value to update"
+        required: true
+
+jobs:
+  update-yaml:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Restrict workflow to authorized users
+        run: |
+          ALLOWED_USERS=("your-github-username" "collaborator-username")
+          if [[ ! " ${ALLOWED_USERS[@]} " =~ " ${GITHUB_ACTOR} " ]]; then
+            echo "❌ ERROR: You (${GITHUB_ACTOR}) are not authorized to run this workflow."
+            exit 1
+          fi
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install yq (YAML processor)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Update YAML file
+        run: |
+          yq -i '.${{ inputs.key_path }} = "${{ inputs.new_value }}"' ${{ inputs.yaml_file }}
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ inputs.yaml_file }}
+          git commit -m "Update ${{ inputs.key_path }} in ${{ inputs.yaml_file }} to '${{ inputs.new_value }}'"
+          git push
