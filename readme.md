@@ -42,13 +42,13 @@ my-app/
 Argo Rollouts manages ReplicaSets directly, keeping two versions active at the same time (Blue & Green), allowing immediate rollbacks, traffic shifting, and manual approvals.
 
 
-🚀 Key Takeaways
-✔ Argo Rollouts uses a single Rollout resource to manage ReplicaSets directly (no Deployments required).
+ Key Takeaways
+> Argo Rollouts uses a single Rollout resource to manage ReplicaSets directly (no Deployments required).
 ✔ Blue-Green deployments are controlled by activeService & previewService, making traffic switching instant.
 ✔ Rollbacks are instant since the old ReplicaSet is still running.
 ✔ Rolling updates (Deployments) cause downtime, while Argo Rollouts prevents it.
 
-Would you like an example of manual approval before switching to Green using Argo Rollouts? 🚀
+Would you like an example of manual approval before switching to Green using Argo Rollouts? 
 
 ## Deployment Flow:
 ![Alt text](images/image2.png)
@@ -56,24 +56,24 @@ Would you like an example of manual approval before switching to Green using Arg
 ## Key Differences Between Deployment and ReplicaSets Model in Argo Rollouts
 ![Alt text](images/image3.png)
 
-🚀 Deployment Steps
-1️⃣ Install Argo Rollouts
+ Deployment Steps
+1️. Install Argo Rollouts
 ```
 kubectl apply -n argocd -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
 ```
-2️⃣ Install the Helm Chart
+2️. Install the Helm Chart
 ```
 helm install my-app ./my-app --namespace my-app
 ```
-3️⃣ Deploy the ArgoCD Application
+3️. Deploy the ArgoCD Application
 ```
 kubectl apply -f templates/argocd-application.yaml
 ```
-4️⃣ Check Rollout Status
+4️. Check Rollout Status
 ```
 kubectl argo rollouts get rollout my-app-rollout -n my-app
 ```
-🎯 Upgrading to a New Version (Deploying Green)
+* Upgrading to a New Version (Deploying Green)
 To deploy a new Green version, update values.yaml:
 ```
 image:
@@ -87,7 +87,7 @@ helm upgrade my-app ./my-app --namespace my-app
 my-app-preview (Green) will now point to v2.
 Wait for testing & validation before promotion.
 If autoPromotionEnabled: true, traffic automatically shifts after 24 hours.
-🔄 Rolling Back to Blue (If Green Fails)
+Rolling Back to Blue (If Green Fails)
 If something is wrong before promotion, abort the rollout:
 ```
 kubectl argo rollouts abort my-app-rollout -n my-app
