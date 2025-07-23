@@ -1,94 +1,25 @@
-name: Delayed PR for File B
+- name: Update switch stage values
+  run: |
+    python3 <<EOF
+    from ruamel.yaml import YAML
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.allow_duplicate_keys = True
 
-on:
-  workflow_run:
-    workflows: ["Blue-Green K8s Check and Native PR"]
-    types:
-      - completed
+    file_path = "values.yaml"
+    stage_value = "${{ github.event.inputs.stage_value }}"
+    set_switch1 = "${{ github.event.inputs.set_switch1 }}" == "true"
+    set_switch2 = "${{ github.event.inputs.set_switch2 }}" == "true"
 
-jobs:
-  delayed-pr:
-    runs-on: ubuntu-latest
+    with open(file_path) as f:
+        data = yaml.load(f)
 
-    steps:
-      - name: Acknowledge delay trigger
-        run: |
-          echo "Triggered from previous workflow. Proceeding with delayed PR."
+    if set_switch1 and 'switch1' in data:
+        data['switch1']['stage'] = stage_value
 
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    if set_switch2 and 'switch2' in data:
+        data['switch2']['stage'] = stage_value
 
-      - name: Install yq and curl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      - name: Create new branch and update YAML file B
-        id: update_b
-        run: |
-          BRANCH="auto/file-b-${{ github.run_id }}"
-          git checkout -b $BRANCH
-
-          # Update the YAML
-          yq -i '.another.key.path = "delayed-value"' path/to/file-b.yaml
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add path/to/file-b.yaml
-          git commit -m "Delayed update to YAML B"
-          git push origin $BRANCH
-
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-
-      - name: Create PR #2 using GitHub API
-        id: pr
-        run: |
-          BRANCH=${{ steps.update_b.outputs.branch }}
-          PR_RESPONSE=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/pulls \
-            -d "$(cat <<EOF
-            {
-              "title": "Delayed File B Update",
-              "head": "$BRANCH",
-              "base": "main",
-              "body": "This PR was created automatically 2 hours after blue-green deployment validation."
-            }
-            EOF
-            )")
-
-          PR_URL=$(echo "$PR_RESPONSE" | jq -r '.html_url')
-          PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r '.number')
-
-          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Auto-merge PR (if approved)
-        run: |
-          curl -X PUT -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/pulls/${{ steps.pr.outputs.pr_number }}/merge \
-            -d '{"merge_method": "squash"}'
-
-      - name: Send email notification using Python
-        env:
-          SMTP_USER: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASS: ${{ secrets.SMTP_PASSWORD }}
-        run: |
-          python3 <<EOF
-          import smtplib
-          from email.message import EmailMessage
-
-          msg = EmailMessage()
-          msg["Subject"] = "Delayed PR #2 Created"
-          msg["From"] = "noreply@yourdomain.com"
-          msg["To"] = "your@email.com"
-          msg.set_content("✅ A delayed PR for YAML B was created:\n${{ steps.pr.outputs.pr_url }}")
-
-          with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-              smtp.starttls()
-              smtp.login("${{ env.SMTP_USER }}", "${{ env.SMTP_PASS }}")
-              smtp.send_message(msg)
-          EOF
+    with open(file_path, 'w') as f:
+        yaml.dump(data, f)
+    EOF
