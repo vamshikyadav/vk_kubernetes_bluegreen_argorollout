@@ -31,31 +31,34 @@ jobs:
         with:
           python-version: 3.10
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install ruamel.yaml
+        run: pip install ruamel.yaml
 
-      - name: Update versions in values.yaml
+        
+      - name: Update values.yaml preserving format
         run: |
           python3 <<EOF
-          import yaml
+          from ruamel.yaml import YAML
+
+          yaml = YAML()
+          yaml.preserve_quotes = True
 
           file_path = "values.yaml"
+          version = "${{ github.event.inputs.version }}"
+          update_blue = "${{ github.event.inputs.update_blue }}" == "true"
+          update_green = "${{ github.event.inputs.update_green }}" == "true"
 
           with open(file_path) as f:
-              data = yaml.safe_load(f)
+              data = yaml.load(f)
 
-          version = "${{ github.event.inputs.version }}"
-
-          if ${{ github.event.inputs.update_blue }}:
+          if update_blue:
               data["blue_version"] = version
 
-          if ${{ github.event.inputs.update_green }}:
+          if update_green:
               data["green_version"] = version
 
           with open(file_path, 'w') as f:
-              yaml.dump(data, f, sort_keys=False)
-
-          print("Updated values.yaml")
+              yaml.dump(data, f)
           EOF
 
       - name: Authenticate GitHub CLI
