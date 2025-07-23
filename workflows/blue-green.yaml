@@ -58,10 +58,22 @@ jobs:
           print("Updated values.yaml")
           EOF
 
-      - name: Commit and Push
+      - name: Authenticate GitHub CLI
         run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Create PR using CLI
+        run: |
+          BRANCH="update-version-${{ github.run_id }}"
+          git checkout -b $BRANCH
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add values.yaml
-          git commit -m "Update versions in values.yaml - blue: ${{ github.event.inputs.update_blue }}, green: ${{ github.event.inputs.update_green }}, version: ${{ github.event.inputs.version }}"
-          git push
+          git commit -m "Update blue/green version to ${{ github.event.inputs.version }}"
+          git push origin $BRANCH
+
+          gh pr create \
+            --title "Update blue/green version to ${{ github.event.inputs.version }}" \
+            --body "Automated version bump:\n- version: ${{ github.event.inputs.version }}\n- blue: ${{ github.event.inputs.update_blue }}\n- green: ${{ github.event.inputs.update_green }}" \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH"
