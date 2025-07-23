@@ -1,0 +1,67 @@
+name: Update Blue/Green Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g. v1.2.3)'
+        required: true
+        default: 'v1.2.3'
+      update_blue:
+        description: 'Update blue_version'
+        required: false
+        type: boolean
+        default: false
+      update_green:
+        description: 'Update green_version'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Update versions in values.yaml
+        run: |
+          python3 <<EOF
+          import yaml
+
+          file_path = "values.yaml"
+
+          with open(file_path) as f:
+              data = yaml.safe_load(f)
+
+          version = "${{ github.event.inputs.version }}"
+
+          if ${{ github.event.inputs.update_blue }}:
+              data["blue_version"] = version
+
+          if ${{ github.event.inputs.update_green }}:
+              data["green_version"] = version
+
+          with open(file_path, 'w') as f:
+              yaml.dump(data, f, sort_keys=False)
+
+          print("Updated values.yaml")
+          EOF
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add values.yaml
+          git commit -m "Update versions in values.yaml - blue: ${{ github.event.inputs.update_blue }}, green: ${{ github.event.inputs.update_green }}, version: ${{ github.event.inputs.version }}"
+          git push
