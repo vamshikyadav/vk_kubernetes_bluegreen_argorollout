@@ -1,25 +1,15 @@
-- name: Update switch stage values
-  run: |
-    python3 <<EOF
-    from ruamel.yaml import YAML
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.allow_duplicate_keys = True
+- name: Update blue_version
+  if: ${{ inputs.update_blue == true }}
+  run: yq -i '.blue_version = "${{ inputs.version }}"' values.yaml
 
-    file_path = "values.yaml"
-    stage_value = "${{ github.event.inputs.stage_value }}"
-    set_switch1 = "${{ github.event.inputs.set_switch1 }}" == "true"
-    set_switch2 = "${{ github.event.inputs.set_switch2 }}" == "true"
+- name: Update green_version
+  if: ${{ inputs.update_green == true }}
+  run: yq -i '.green_version = "${{ inputs.version }}"' values.yaml
 
-    with open(file_path) as f:
-        data = yaml.load(f)
+- name: Update switch1.stage
+  if: ${{ inputs.set_switch1 == true }}
+  run: yq -i '.switch1.stage = "${{ inputs.stage_value }}"' values.yaml
 
-    if set_switch1 and 'switch1' in data:
-        data['switch1']['stage'] = stage_value
-
-    if set_switch2 and 'switch2' in data:
-        data['switch2']['stage'] = stage_value
-
-    with open(file_path, 'w') as f:
-        yaml.dump(data, f)
-    EOF
+- name: Update switch2.stage
+  if: ${{ inputs.set_switch2 == true }}
+  run: yq -i '.switch2.stage = "${{ inputs.stage_value }}"' values.yaml
