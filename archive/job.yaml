@@ -7,30 +7,61 @@ metadata:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gcs-to-pv
+  name: gcs-perms-and-copy
   namespace: default
 spec:
-  backoffLimit: 1
+  backoffLimit: 0
   template:
     spec:
-      serviceAccountName: gcs-reader         # uses Workload Identity
+      serviceAccountName: gcs-reader
       restartPolicy: Never
       securityContext:
-        fsGroup: 2000                        # helpful for NFS/Filestore perms
+        fsGroup: 2000
+        fsGroupChangePolicy: OnRootMismatch   # faster: only fix when needed
       volumes:
         - name: out
           persistentVolumeClaim:
-            claimName: shared-rwx            # <-- your PVC
+            claimName: shared-rwx               # your PVC
+      # 1) Init: best-effort permission fix on the mount
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.36
+          command: ["sh","-lc"]
+          args:
+            - |
+              set -eux
+              # Make sure directory exists (it will), then relax perms for group
+              chgrp -R 2000 /data || true
+              chmod -R g+rwX /data || true
+          volumeMounts:
+            - name: out
+              mountPath: /data
+      # 2) Copy/sync from GCS to PVC (with "move" semantics via staging)
       containers:
         - name: copier
           image: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+          securityContext:
+            runAsUser: 2000
+            runAsGroup: 2000
+          env:
+            - name: SRC
+              value: gs://YOUR_BUCKET/some/prefix   # <-- change me
+            - name: DEST
+              value: /data/final                    # <-- change me if needed
           command: ["bash","-lc"]
           args:
-            # COPY: use cp -r, or use rsync to keep it idempotent
-            # - cp example:
-            # ["gcloud storage cp -r gs://YOUR_BUCKET/some/prefix/. /data/"]
-            # - rsync example (keeps target in sync; add -d to delete extras):
-            - gcloud storage rsync -r gs://YOUR_BUCKET/some/prefix /data
+            - |
+              set -euo pipefail
+              umask 002                    # ensure group-write on new files
+              mkdir -p "${DEST}"
+              STAGE="$(mktemp -d /data/.stage.XXXXXX)"
+              # Pull from GCS to a staging directory
+              gcloud storage rsync -r "${SRC}" "${STAGE}"
+              # Normalize perms (harmless if already correct)
+              chmod -R g+rwX "${STAGE}" || true
+              # "Move" staged content into final location (atomic-ish)
+              rsync -a "${STAGE}/" "${DEST}/"
+              rm -rf "${STAGE}"
           volumeMounts:
             - name: out
               mountPath: /data
