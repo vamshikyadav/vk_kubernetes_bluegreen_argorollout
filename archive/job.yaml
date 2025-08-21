@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gcs-reader
+  namespace: default
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gcs-to-pv
+  namespace: default
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: gcs-reader         # uses Workload Identity
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 2000                        # helpful for NFS/Filestore perms
+      volumes:
+        - name: out
+          persistentVolumeClaim:
+            claimName: shared-rwx            # <-- your PVC
+      containers:
+        - name: copier
+          image: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+          command: ["bash","-lc"]
+          args:
+            # COPY: use cp -r, or use rsync to keep it idempotent
+            # - cp example:
+            # ["gcloud storage cp -r gs://YOUR_BUCKET/some/prefix/. /data/"]
+            # - rsync example (keeps target in sync; add -d to delete extras):
+            - gcloud storage rsync -r gs://YOUR_BUCKET/some/prefix /data
+          volumeMounts:
+            - name: out
+              mountPath: /data
