@@ -1,0 +1,33 @@
+name: Conditional YAML Check
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-yaml:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Read value from yaml
+        id: get-value
+        run: |
+          VALUE=$(yq '.yourKey' your-file.yaml)
+          echo "yaml_value=$VALUE" >> $GITHUB_ENV
+
+      - name: Run action if value matches
+        if: env.yaml_value == 'expected'
+        run: echo "✅ Value is expected, running this step"
+
+      - name: Run action if value does NOT match
+        if: env.yaml_value != 'expected'
+        run: echo "❌ Value is different, running alternate step"
