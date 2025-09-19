@@ -1,0 +1,87 @@
+- name: Update blue_version
+  if: ${{ inputs.update_blue == true }}
+  run: yq -i '.blue_version = "${{ inputs.version }}"' values.yaml
+
+- name: Update green_version
+  if: ${{ inputs.update_green == true }}
+  run: yq -i '.green_version = "${{ inputs.version }}"' values.yaml
+
+- name: Update switch1.stage
+  if: ${{ inputs.set_switch1 == true }}
+  run: yq -i '.switch1.stage = "${{ inputs.stage_value }}"' values.yaml
+
+- name: Update switch2.stage
+  if: ${{ inputs.set_switch2 == true }}
+  run: yq -i '.switch2.stage = "${{ inputs.stage_value }}"' values.yaml
+name: Multi App Version Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      app1_enabled:
+        description: "Include app1?"
+        type: boolean
+        default: false
+      app1_version:
+        description: "Version for app1"
+        required: false
+        default: "1.0.0"
+
+      app2_enabled:
+        description: "Include app2?"
+        type: boolean
+        default: false
+      app2_version:
+        description: "Version for app2"
+        required: false
+        default: "1.0.0"
+
+      app3_enabled:
+        description: "Include app3?"
+        type: boolean
+        default: false
+      app3_version:
+        description: "Version for app3"
+        required: false
+        default: "1.0.0"
+
+jobs:
+  build-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build matrix JSON
+        id: set-matrix
+        run: |
+          apps=()
+
+          if [[ "${{ github.event.inputs.app1_enabled }}" == "true" ]]; then
+            apps+=("{\"app\":\"app1\",\"version\":\"${{ github.event.inputs.app1_version }}\"}")
+          fi
+
+          if [[ "${{ github.event.inputs.app2_enabled }}" == "true" ]]; then
+            apps+=("{\"app\":\"app2\",\"version\":\"${{ github.event.inputs.app2_version }}\"}")
+          fi
+
+          if [[ "${{ github.event.inputs.app3_enabled }}" == "true" ]]; then
+            apps+=("{\"app\":\"app3\",\"version\":\"${{ github.event.inputs.app3_version }}\"}")
+          fi
+
+          json=$(printf '%s\n' "${apps[@]}" | jq -s .)
+          echo "matrix=$json" >> $GITHUB_OUTPUT
+
+  per-app:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+    steps:
+      - name: Run same commands for each app
+        run: |
+          echo "👉 Running for ${{ matrix.app }} with version ${{ matrix.version }}"
+          # Example repeated steps:
+          echo "Building ${{ matrix.app }}..."
+          echo "Tagging as version ${{ matrix.version }}"
+          echo "Deploying ${{ matrix.app }}:${{ matrix.version }}"
