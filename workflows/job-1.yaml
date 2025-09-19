@@ -1,113 +1,42 @@
-name: Blue-Green K8s Check and Native PR
+name: Multi App Version Update (JSON)
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Environment (dev/prod)"
+      app_versions:
+        description: "JSON mapping of app->version (e.g. {\"app1\":\"1.0.0\",\"app2\":\"2.1.3\"})"
         required: true
-        default: "dev"
-
-env:
-  KUBECONFIG: /tmp/kubeconfig
+        default: '{"app1":"1.0.0","app2":"2.1.3"}'
 
 jobs:
-  validate-and-create-pr:
+  build-matrix:
     runs-on: ubuntu-latest
-
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Validate triggering user
+      - name: Parse JSON into matrix
+        id: set-matrix
         run: |
-          echo "Validating user: $GITHUB_ACTOR"
-          ALLOWED_USERS=("your-github-id" "another-authorized-user")
+          input='${{ github.event.inputs.app_versions }}'
+          echo "📥 Input JSON: $input"
+          
+          # Convert JSON {"app1":"1.0.0","app2":"2.1.3"}
+          # → [{"app":"app1","version":"1.0.0"},{"app":"app2","version":"2.1.3"}]
+          json=$(echo "$input" | jq -r 'to_entries | map({app: .key, version: .value})')
+          echo "matrix=$json" >> $GITHUB_OUTPUT
+          echo "📤 Matrix JSON: $json"
 
-          if [[ ! " ${ALLOWED_USERS[@]} " =~ " ${GITHUB_ACTOR} " ]]; then
-            echo "❌ User $GITHUB_ACTOR is not authorized to run this workflow."
-            exit 1
-          fi
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install yq and curl
+  per-app:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+    steps:
+      - name: Run commands per app
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl
-          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_CONTENT }}" > $KUBECONFIG
-          chmod 600 $KUBECONFIG
-
-      - name: Check pods in blue and green deployments
-        run: |
-          ENV="${{ github.event.inputs.environment }}"
-          BLUE_DEPLOY="deployment-blue-${ENV}"
-          GREEN_DEPLOY="deployment-green-${ENV}"
-          NAMESPACE="${ENV}"
-
-          BLUE_PODS=$(kubectl get pods -n $NAMESPACE -l app=$BLUE_DEPLOY --no-headers | wc -l)
-          GREEN_PODS=$(kubectl get pods -n $NAMESPACE -l app=$GREEN_DEPLOY --no-headers | wc -l)
-
-          echo "Blue: $BLUE_PODS | Green: $GREEN_PODS"
-          if [ "$BLUE_PODS" -eq 0 ] || [ "$GREEN_PODS" -eq 0 ]; then
-            echo "❌ Zero pods found in one of the deployments"
-            exit 1
-          fi
-
-      - name: Create branch and update YAML
-        id: update_yaml
-        run: |
-          BRANCH="auto/file-a-${{ github.run_id }}"
-          git checkout -b $BRANCH
-
-          # Update YAML using yq
-          yq -i '.your.key.path = "new-value-for-${{ github.event.inputs.environment }}"' path/to/file-a.yaml
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add path/to/file-a.yaml
-          git commit -m "Update YAML A for ${{ github.event.inputs.environment }}"
-          git push origin $BRANCH
-
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-
-      - name: Create Pull Request using GitHub API
-        id: pr
-        run: |
-          BRANCH=${{ steps.update_yaml.outputs.branch }}
-          PR_RESPONSE=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/pulls \
-            -d "$(cat <<EOF
-            {
-              "title": "File A update for ${{ github.event.inputs.environment }}",
-              "head": "$BRANCH",
-              "base": "main",
-              "body": "This PR updates file A based on live pods in blue/green deployments for **${{ github.event.inputs.environment }}**."
-            }
-            EOF
-            )")
-
-            PR_URL=$(echo "$PR_RESPONSE" | jq -r '.html_url')
-            PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r '.number')
-
-            echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Add labels and reviewers
-        run: |
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/issues/${{ steps.pr.outputs.pr_number }}/labels \
-            -d '{"labels":["automated","${{ github.event.inputs.environment }}"]}'
-
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/pulls/${{ steps.pr.outputs.pr_number }}/requested_reviewers \
-            -d '{"reviewers":["your-reviewer-id"]}'
+          echo "👉 Running for ${{ matrix.app }} with version ${{ matrix.version }}"
+          # Example repeated steps:
+          echo "Building ${{ matrix.app }}..."
+          echo "Tagging as version ${{ matrix.version }}"
+          echo "Deploying ${{ matrix.app }}:${{ matrix.version }}"
