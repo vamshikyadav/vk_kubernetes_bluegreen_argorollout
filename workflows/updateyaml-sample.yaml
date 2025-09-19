@@ -1,18 +1,3 @@
-- name: Update blue_version
-  if: ${{ inputs.update_blue == true }}
-  run: yq -i '.blue_version = "${{ inputs.version }}"' values.yaml
-
-- name: Update green_version
-  if: ${{ inputs.update_green == true }}
-  run: yq -i '.green_version = "${{ inputs.version }}"' values.yaml
-
-- name: Update switch1.stage
-  if: ${{ inputs.set_switch1 == true }}
-  run: yq -i '.switch1.stage = "${{ inputs.stage_value }}"' values.yaml
-
-- name: Update switch2.stage
-  if: ${{ inputs.set_switch2 == true }}
-  run: yq -i '.switch2.stage = "${{ inputs.stage_value }}"' values.yaml
 name: Multi App Version Update
 
 on:
